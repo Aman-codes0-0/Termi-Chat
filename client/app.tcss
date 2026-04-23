@@ -1,0 +1,260 @@
+/* Global Variable Definitions (Default Theme: Cyan) */
+$background: #111;
+$surface: #1a1a1a;
+$primary: #00f0ff;
+$secondary: #0088ff;
+$accent: #00f0ff;
+$text: #fff;
+
+/* Base Styles */
+Screen {
+    align: center middle;
+    background: $background;
+    color: $text;
+}
+
+#login-container, #selection-container {
+    width: 60;
+    height: auto;
+    border: solid $primary;
+    padding: 2;
+    background: $surface;
+}
+
+#title {
+    text-align: center;
+    text-style: bold;
+    padding-bottom: 1;
+    color: $primary;
+}
+
+Input {
+    margin-bottom: 1;
+    border: tall $surface;
+}
+
+Input:focus {
+    border: tall $primary;
+}
+
+#button-container {
+    height: auto;
+    align: center middle;
+}
+
+Button {
+    margin-right: 2;
+}
+
+#error-message {
+    text-align: center;
+    margin-top: 1;
+}
+
+/* Chat Screen */
+ChatScreen {
+    align: left top;
+}
+
+#chat-messages {
+    height: 1fr;
+    border: solid $primary;
+    background: $surface;
+    padding: 1;
+}
+
+.message-row {
+    height: auto;
+    margin-bottom: 0;
+    padding: 0 1;
+}
+
+.message-meta {
+    width: auto;
+    text-style: bold;
+}
+
+.message-text {
+    width: 1fr;
+}
+
+.file-label {
+    width: auto;
+    color: $accent;
+    text-style: italic;
+    margin-right: 1;
+}
+
+.btn-download {
+    height: 1;
+    min-width: 10;
+    padding: 0 1;
+    border: none;
+    background: $secondary;
+    color: $text;
+}
+
+.btn-download:hover {
+    background: $primary;
+    color: $background;
+}
+
+#input-container {
+    height: 3;
+    dock: bottom;
+    margin-top: 1;
+}
+
+#message-input {
+    width: 1fr;
+}
+
+#btn-send {
+    width: 12;
+}
+
+#btn-attach {
+    width: 12;
+}
+
+/* Theme Screen Styles */
+#theme-container, #attach-container, #emoji-container {
+    width: 60;
+    height: auto;
+    border: double $primary;
+    background: $surface;
+    padding: 1;
+    align: center middle;
+}
+
+#emoji-container {
+    height: 45;
+    width: 80;
+    layer: top;
+}
+
+#emoji-grid {
+    grid-size: 8;
+    grid-gutter: 1;
+    padding: 1;
+    height: 1fr;
+    overflow-y: scroll;
+}
+
+.emoji-btn {
+    min-width: 8;
+    height: 3;
+    border: none;
+    background: $surface;
+    color: $text;
+    content-align: center middle;
+}
+
+.emoji-btn:hover {
+    background: $primary;
+    color: $background;
+}
+
+#shortcut-hint {
+    width: 100%;
+    text-align: center;
+    color: $accent;
+    opacity: 0.7;
+    margin-top: 1;
+}
+
+#attach-container {
+    height: 15;
+}
+
+OptionList {
+    background: $surface;
+    color: $text;
+}
+
+OptionList > .option-list--highlighted {
+    background: $primary;
+    color: $background;
+}
+
+/* Theme Overrides - Using standard CSS properties as variables can't be re-defined in classes */
+
+/* Dracula */
+.theme-dracula Screen { background: #282a36; color: #f8f8f2; }
+.theme-dracula #login-container, .theme-dracula #selection-container, .theme-dracula #theme-container { background: #343746; border: solid #bd93f9; }
+.theme-dracula #title { color: #bd93f9; }
+.theme-dracula #chat-log { background: #343746; border: solid #bd93f9; color: #f8f8f2; }
+.theme-dracula Input:focus { border: tall #bd93f9; }
+.theme-dracula OptionList > .option-list--highlighted { background: #bd93f9; color: #282a36; }
+
+/* Nord */
+.theme-nord Screen { background: #2e3440; color: #d8dee9; }
+.theme-nord #login-container, .theme-nord #selection-container, .theme-nord #theme-container { background: #3b4252; border: solid #88c0d0; }
+.theme-nord #title { color: #88c0d0; }
+.theme-nord #chat-log { background: #3b4252; border: solid #88c0d0; color: #d8dee9; }
+.theme-nord Input:focus { border: tall #88c0d0; }
+.theme-nord OptionList > .option-list--highlighted { background: #88c0d0; color: #2e3440; }
+
+/* Gruvbox */
+.theme-gruvbox Screen { background: #282828; color: #ebdbb2; }
+.theme-gruvbox #login-container, .theme-gruvbox #selection-container, .theme-gruvbox #theme-container { background: #3c3836; border: solid #fe8019; }
+.theme-gruvbox #title { color: #fe8019; }
+.theme-gruvbox #chat-log { background: #3c3836; border: solid #fe8019; color: #ebdbb2; }
+.theme-gruvbox Input:focus { border: tall #fe8019; }
+.theme-gruvbox OptionList > .option-list--highlighted { background: #fe8019; color: #282828; }
+
+/* Monokai */
+.theme-monokai Screen { background: #272822; color: #f8f8f2; }
+.theme-monokai #login-container, .theme-monokai #selection-container, .theme-monokai #theme-container { background: #3e3d32; border: solid #a6e22e; }
+.theme-monokai #title { color: #a6e22e; }
+.theme-monokai #chat-log { background: #3e3d32; border: solid #a6e22e; color: #f8f8f2; }
+.theme-monokai Input:focus { border: tall #a6e22e; }
+.theme-monokai OptionList > .option-list--highlighted { background: #a6e22e; color: #272822; }
+
+/* Solarized Dark */
+.theme-solarized-dark Screen { background: #002b36; color: #839496; }
+.theme-solarized-dark #login-container, .theme-solarized-dark #selection-container, .theme-solarized-dark #theme-container { background: #073642; border: solid #268bd2; }
+.theme-solarized-dark #title { color: #268bd2; }
+.theme-solarized-dark #chat-log { background: #073642; border: solid #268bd2; color: #839496; }
+.theme-solarized-dark Input:focus { border: tall #268bd2; }
+.theme-solarized-dark OptionList > .option-list--highlighted { background: #268bd2; color: #002b36; }
+
+/* Solarized Light */
+.theme-solarized-light Screen { background: #fdf6e3; color: #657b83; }
+.theme-solarized-light #login-container, .theme-solarized-light #selection-container, .theme-solarized-light #theme-container { background: #eee8d5; border: solid #268bd2; }
+.theme-solarized-light #title { color: #268bd2; }
+.theme-solarized-light #chat-log { background: #eee8d5; border: solid #268bd2; color: #657b83; }
+.theme-solarized-light Input:focus { border: tall #268bd2; }
+.theme-solarized-light OptionList > .option-list--highlighted { background: #268bd2; color: #fdf6e3; }
+
+/* Midnight */
+.theme-midnight Screen { background: #000; color: #fff; }
+.theme-midnight #login-container, .theme-midnight #selection-container, .theme-midnight #theme-container { background: #111; border: solid #fff; }
+.theme-midnight #title { color: #fff; }
+.theme-midnight #chat-log { background: #111; border: solid #fff; color: #fff; }
+.theme-midnight Input:focus { border: tall #fff; }
+.theme-midnight OptionList > .option-list--highlighted { background: #fff; color: #000; }
+
+/* Emerald */
+.theme-emerald Screen { background: #064e3b; color: #ecfdf5; }
+.theme-emerald #login-container, .theme-emerald #selection-container, .theme-emerald #theme-container { background: #065f46; border: solid #10b981; }
+.theme-emerald #title { color: #10b981; }
+.theme-emerald #chat-log { background: #065f46; border: solid #10b981; color: #ecfdf5; }
+.theme-emerald Input:focus { border: tall #10b981; }
+.theme-emerald OptionList > .option-list--highlighted { background: #10b981; color: #064e3b; }
+
+/* Crimson */
+.theme-crimson Screen { background: #450a0a; color: #fef2f2; }
+.theme-crimson #login-container, .theme-crimson #selection-container, .theme-crimson #theme-container { background: #7f1d1d; border: solid #ef4444; }
+.theme-crimson #title { color: #ef4444; }
+.theme-crimson #chat-log { background: #7f1d1d; border: solid #ef4444; color: #fef2f2; }
+.theme-crimson Input:focus { border: tall #ef4444; }
+.theme-crimson OptionList > .option-list--highlighted { background: #ef4444; color: #450a0a; }
+
+/* Lavender */
+.theme-lavender Screen { background: #2e1065; color: #f5f3ff; }
+.theme-lavender #login-container, .theme-lavender #selection-container, .theme-lavender #theme-container { background: #4c1d95; border: solid #a78bfa; }
+.theme-lavender #title { color: #a78bfa; }
+.theme-lavender #chat-log { background: #4c1d95; border: solid #a78bfa; color: #f5f3ff; }
+.theme-lavender Input:focus { border: tall #a78bfa; }
+.theme-lavender OptionList > .option-list--highlighted { background: #a78bfa; color: #2e1065; }
