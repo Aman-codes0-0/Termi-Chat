@@ -7,5 +7,6 @@ if [ ! -d "venv" ]; then
 fi
 
 source venv/bin/activate
-echo "Starting TUI Chat Backend Server..."
+echo "Starting Termi-Chat Backend Server..."
+echo "Web Client will be available at: http://127.0.0.1:8000"
 uvicorn server.main:app --host 127.0.0.1 --port 8000

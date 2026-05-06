@@ -7,5 +7,5 @@ if [ ! -d "venv" ]; then
 fi
 
 source venv/bin/activate
-echo "Starting TUI Chat Client..."
+echo "Starting Termi-Chat Client..."
 python client/app.py
