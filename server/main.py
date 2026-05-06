@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, UploadFile, File
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from .models import UserCreate, UserLogin, Token, ThemeUpdate
-from .auth import create_user, authenticate_user, get_username_from_token, update_user_theme
+from .auth import create_user, authenticate_user, get_username_from_token, update_user_theme, send_friend_request, accept_friend_request, get_pending_requests, get_friends, search_users
 from .room_manager import room_manager
 import json
 import uuid
@@ -13,6 +14,13 @@ app = FastAPI(title="TUI Chat Ephemeral Server")
 # In-memory file storage
 # file_id -> {"filename": str, "content": bytes}
 ephemeral_files: Dict[str, dict] = {}
+
+# In-memory online tracking
+online_users: Dict[str, datetime] = {}
+
+def update_online_status(username: str):
+    online_users[username] = datetime.now()
+
 
 @app.post("/register")
 def register(user: UserCreate):
@@ -41,6 +49,73 @@ def update_theme(theme_update: ThemeUpdate, authorization: str = Header(...)):
     if update_user_theme(username, theme_update.theme):
         return {"message": "Theme updated successfully"}
     raise HTTPException(status_code=404, detail="User not found")
+
+@app.get("/friends")
+def list_friends(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token format")
+    token = authorization.split(" ")[1]
+    username = get_username_from_token(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    
+    update_online_status(username)
+    friends = get_friends(username)
+    
+    result = []
+    now = datetime.now()
+    for f in friends:
+        is_online = False
+        if f in online_users:
+            if (now - online_users[f]).total_seconds() < 10:
+                is_online = True
+                
+        unread = room_manager.get_unread_count(username, f) # username is the recipient, f is the sender
+        
+        result.append({
+            "username": f,
+            "is_online": is_online,
+            "unread_count": unread
+        })
+        
+    return {"friends": result}
+
+@app.get("/pending-requests")
+def list_pending(authorization: str = Header(...)):
+    token = authorization.split(" ")[1]
+    username = get_username_from_token(token)
+    if not username: raise HTTPException(status_code=401)
+    update_online_status(username)
+    return {"requests": get_pending_requests(username)}
+
+@app.post("/send-request")
+def send_request(data: dict, authorization: str = Header(...)):
+    token = authorization.split(" ")[1]
+    username = get_username_from_token(token)
+    if not username: raise HTTPException(status_code=401)
+    if send_friend_request(username, data.get("to_user")):
+        return {"message": "Request sent"}
+    raise HTTPException(status_code=404, detail="User not found")
+
+@app.post("/accept-request")
+def accept_request(data: dict, authorization: str = Header(...)):
+    token = authorization.split(" ")[1]
+    username = get_username_from_token(token)
+    if not username: raise HTTPException(status_code=401)
+    if accept_friend_request(username, data.get("requester")):
+        return {"message": "Request accepted"}
+    raise HTTPException(status_code=400, detail="Failed to accept")
+
+@app.get("/search-users")
+def search_registered_users(q: str, authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token format")
+    token = authorization.split(" ")[1]
+    username = get_username_from_token(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    update_online_status(username)
+    return {"results": search_users(q, username)}
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...), authorization: str = Header(...)):
@@ -112,3 +187,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str, target_username: 
     except Exception:
         # Handle cases where non-JSON data might be sent
         room_manager.disconnect(websocket, room_id, username)
+
+# Serve static files from the 'web' directory
+app.mount("/", StaticFiles(directory="web", html=True), name="web")

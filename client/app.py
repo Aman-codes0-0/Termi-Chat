@@ -1,5 +1,5 @@
 from textual.app import App
-from screens import LoginScreen, ChatSelectionScreen, ChatScreen
+from screens import LoginScreen, MainChatScreen, SearchUsersScreen, PendingRequestsScreen
 from theme_screen import ThemeSelectionScreen
 from emoji_screen import EmojiPickerScreen
 from websocket_handler import WebSocketClient, ChatMessageReceived
@@ -13,10 +13,11 @@ class TUIChatApp(App):
     
     SCREENS = {
         "login": LoginScreen,
-        "chat_selection": ChatSelectionScreen,
-        "chat": ChatScreen,
+        "main_chat": MainChatScreen,
         "theme_selection": ThemeSelectionScreen,
-        "emoji_picker": EmojiPickerScreen
+        "emoji_picker": EmojiPickerScreen,
+        "search_users": SearchUsersScreen,
+        "pending_requests": PendingRequestsScreen
     }
     
     def __init__(self):
@@ -111,6 +112,31 @@ class TUIChatApp(App):
 
     def on_mount(self) -> None:
         self.push_screen("login")
+        # Start a background polling timer every 5 seconds
+        self.set_interval(5.0, self.poll_updates)
+
+    async def poll_updates(self) -> None:
+        if not self.token: return
+        
+        # Only poll if we are on MainChatScreen
+        if isinstance(self.screen, MainChatScreen):
+            await self.screen.action_refresh_friends()
+            # We could also check pending requests and notify the user
+            import httpx
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        "http://localhost:8000/pending-requests",
+                        headers={"Authorization": f"Bearer {self.token}"}
+                    )
+                    if response.status_code == 200:
+                        reqs = response.json().get("requests", [])
+                        if reqs:
+                            error_label = self.screen.query_one("#selection-error")
+                            if not error_label.renderable:  # Only overwrite if no other error
+                                error_label.update(f"[yellow]You have {len(reqs)} pending request(s)! Press 'P' to view.[/yellow]")
+            except Exception:
+                pass
 
     async def connect_websocket(self):
         self.ws_client = WebSocketClient(self, self.token, self.target_username)
@@ -119,15 +145,16 @@ class TUIChatApp(App):
             self.notify("Failed to connect to chat server", severity="error")
 
     def on_chat_message_received(self, message: ChatMessageReceived) -> None:
-        chat_screen = self.get_screen("chat")
-        chat_screen.add_message(
-            message.sender, 
-            message.text, 
-            message.time, 
-            message.msg_type, 
-            message.file_id, 
-            message.filename
-        )
+        if isinstance(self.screen, MainChatScreen):
+            self.screen.add_message(
+                message.sender, 
+                message.text, 
+                message.time, 
+                message.msg_type, 
+                message.file_id, 
+                message.filename
+            )
+
 
     async def on_unmount(self) -> None:
         if self.ws_client:

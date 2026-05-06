@@ -1,6 +1,6 @@
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Input, Button, Static, RichLog, Label
+from textual.widgets import Header, Footer, Input, Button, Static, Label, ListView, ListItem
 from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual.message import Message
 import httpx
@@ -88,58 +88,129 @@ class LoginScreen(Screen):
                         self.app.token = data.get("access_token")
                         self.app.username = username
                         self.app.set_theme(data.get("theme", "default"))
-                        self.app.push_screen("chat_selection")
+                        self.app.push_screen("main_chat")
                     else:
                         error_label.update(f"[red]{response.json().get('detail', 'Login failed')}[/red]")
             except Exception as e:
                 error_label.update(f"[red]Error connecting to server: {e}[/red]")
 
-class ChatSelectionScreen(Screen):
-    def compose(self) -> ComposeResult:
-        yield Header()
-        with Vertical(id="selection-container"):
-            yield Static("Who do you want to chat with?", id="title")
-            yield Input(placeholder="Target Username", id="target-username")
-            yield Button("Start Chat", id="btn-start-chat", variant="success")
-        yield Footer()
-
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
-        target_username = self.query_one("#target-username", Input).value
-        if target_username:
-            self.app.target_username = target_username
-            await self.app.connect_websocket()
-            self.app.push_screen("chat")
-
-EMOJI_MAP = {
-    ":smile:": "😀", ":laugh:": "😂", ":rofl:": "🤣", ":blush:": "😊",
-    ":cool:": "😎", ":heart_eyes:": "😍", ":kiss:": "😘", ":thinking:": "🤔",
-    ":neutral:": "😐", ":sleeping:": "😴", ":rage:": "😡", ":thumb:": "👍",
-    ":ok:": "👌", ":heart:": "❤️", ":fire:": "🔥", ":rocket:": "🚀",
-    ":tada:": "🎉", ":star:": "⭐", ":100:": "💯"
-}
-
-class ChatScreen(Screen):
+class MainChatScreen(Screen):
     BINDINGS = [
+        ("s", "app.push_screen('search_users')", "Search Users"),
+        ("p", "app.push_screen('pending_requests')", "Pending Requests"),
+        ("r", "refresh_friends", "Refresh"),
         ("ctrl+e", "app.push_screen('emoji_picker')", "Emoji"),
         ("ctrl+t", "app.push_screen('theme_selection')", "Themes")
     ]
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with Vertical():
-            yield VerticalScroll(id="chat-messages")
-            with Horizontal(id="input-container"):
-                yield Input(placeholder="Type a message... (Ctrl+E for Emoji)", id="message-input")
-                yield Button("Send", id="btn-send", variant="primary")
-                yield Button("Attach", id="btn-attach", variant="warning")
-            yield Label("[Ctrl+E] Emoji | [Ctrl+T] Themes", id="shortcut-hint")
+        with Horizontal(id="main-layout"):
+            # Sidebar for friends
+            with Vertical(id="sidebar"):
+                yield Static("Friends List", id="sidebar-title")
+                yield ListView(id="friends-list")
+                yield Static("[S] Search | [P] Pending", id="sidebar-hints")
+                yield Static("", id="selection-error")
+            
+            # Main Chat Area
+            with Vertical(id="chat-area"):
+                yield Static("Select a friend to chat", id="chat-header")
+                yield VerticalScroll(id="chat-messages")
+                with Horizontal(id="input-container"):
+                    yield Input(placeholder="Type a message... (Ctrl+E Emoji)", id="message-input", disabled=True)
+                    yield Button("Send", id="btn-send", variant="primary", disabled=True)
+                    yield Button("Attach", id="btn-attach", variant="warning", disabled=True)
+                yield Label("[Ctrl+E] Emoji | [Ctrl+T] Themes", id="shortcut-hint")
         yield Footer()
 
     async def on_mount(self) -> None:
         self.message_list = self.query_one("#chat-messages", VerticalScroll)
+        self.chat_header = self.query_one("#chat-header", Static)
+        self.msg_input = self.query_one("#message-input", Input)
+        self.btn_send = self.query_one("#btn-send", Button)
+        self.btn_attach = self.query_one("#btn-attach", Button)
+        await self.action_refresh_friends()
+
+    async def action_refresh_friends(self) -> None:
+        list_view = self.query_one("#friends-list", ListView)
+        error_label = self.query_one("#selection-error", Static)
+        
+        # Keep track of currently selected index to restore it if possible
+        current_index = list_view.index
+        list_view.clear()
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "http://localhost:8000/friends",
+                    headers={"Authorization": f"Bearer {self.app.token}"}
+                )
+                if response.status_code == 200:
+                    friends = response.json().get("friends", [])
+                    if not friends:
+                        error_label.update("No friends yet.")
+                    else:
+                        error_label.update("")
+                        for friend_obj in friends:
+                            if isinstance(friend_obj, str):
+                                friend = friend_obj
+                                is_online = False
+                                unread = 0
+                            else:
+                                friend = friend_obj.get("username")
+                                is_online = friend_obj.get("is_online", False)
+                                unread = friend_obj.get("unread_count", 0)
+                                
+                            if not friend: continue
+                            
+                            # Highlight the active friend
+                            prefix = "💬 " if friend == self.app.target_username else "👤 "
+                            status = "🟢" if is_online else "🔴"
+                            
+                            label_text = f"{status} {prefix}{friend}"
+                            if unread > 0 and friend != self.app.target_username:
+                                label_text += f" [bold red]({unread})[/bold red]"
+                                
+                            list_view.append(ListItem(Label(label_text), id=f"friend-{friend}"))
+                        
+                        # Restore selection if it's still valid
+                        if current_index is not None and current_index < len(friends):
+                            list_view.index = current_index
+                else:
+                    error_label.update(f"[red]Failed to load friends[/red]")
+        except Exception as e:
+            error_label.update(f"[red]Error: {e}[/red]")
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if not event.item.id or not event.item.id.startswith("friend-"):
+            return
+            
+        target_username = event.item.id.replace("friend-", "")
+        
+        # Don't reconnect if clicking the same user
+        if target_username == self.app.target_username:
+            return
+            
+        # Disconnect previous websocket if exists
+        if self.app.ws_client:
+            await self.app.ws_client.disconnect()
+            self.app.ws_client = None
+            
+        self.app.target_username = target_username
+        self.chat_header.update(f"Chatting with: {target_username}")
+        self.message_list.remove_children()
+        
+        # Enable inputs
+        self.msg_input.disabled = False
+        self.btn_send.disabled = False
+        self.btn_attach.disabled = False
+        self.msg_input.focus()
+        
+        await self.app.connect_websocket()
+        await self.action_refresh_friends() # Refresh to show active icon
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """Replace shortcodes like :smile: with emojis in real-time."""
         if event.input.id == "message-input":
             current_value = event.value
             new_value = current_value
@@ -149,7 +220,6 @@ class ChatScreen(Screen):
             
             if new_value != current_value:
                 event.input.value = new_value
-                # Keep cursor at the end
                 event.input.cursor_position = len(new_value)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -159,17 +229,19 @@ class ChatScreen(Screen):
             self.app.push_screen(FileAttachScreen())
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
-        await self.send_message()
+        if event.input.id == "message-input":
+            await self.send_message()
 
     async def send_message(self):
-        input_widget = self.query_one("#message-input", Input)
-        message_text = input_widget.value
+        if not self.app.ws_client or not self.app.target_username:
+            return
+        message_text = self.msg_input.value
         if message_text:
             await self.app.ws_client.send_message({
                 "type": "text",
                 "text": message_text
             })
-            input_widget.value = ""
+            self.msg_input.value = ""
 
     def add_message(self, sender: str, text: str, time: str, msg_type: str = "text", file_id: str = None, filename: str = None):
         is_self = sender == self.app.username
@@ -177,6 +249,137 @@ class ChatScreen(Screen):
         self.message_list.mount(new_msg)
         new_msg.scroll_visible()
 
+class SearchUsersScreen(Screen):
+    BINDINGS = [("escape", "app.pop_screen", "Back")]
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Vertical(id="search-container"):
+            yield Static("Search for Users to Add", id="title")
+            yield Input(placeholder="Type username and press Enter...", id="search-input")
+            yield ListView(id="search-results-list")
+            yield Static("", id="search-message")
+        yield Footer()
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "search-input":
+            query = event.value.strip()
+            if len(query) < 2: return
+            
+            list_view = self.query_one("#search-results-list", ListView)
+            msg_label = self.query_one("#search-message", Static)
+            list_view.clear()
+            msg_label.update("Searching...")
+            
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        f"http://localhost:8000/search-users?q={query}",
+                        headers={"Authorization": f"Bearer {self.app.token}"}
+                    )
+                    if response.status_code == 200:
+                        results = response.json().get("results", [])
+                        if not results:
+                            msg_label.update("No users found.")
+                        else:
+                            msg_label.update("Select a user to send a friend request.")
+                            for res in results:
+                                if res != self.app.username:
+                                    list_view.append(ListItem(Label(f"✉️ {res}"), id=f"search-{res}"))
+                    else:
+                        msg_label.update(f"[red]Search failed[/red]")
+            except Exception as e:
+                msg_label.update(f"[red]Error: {e}[/red]")
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.item.id and event.item.id.startswith("search-"):
+            target_user = event.item.id.replace("search-", "")
+            msg_label = self.query_one("#search-message", Static)
+            
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "http://localhost:8000/send-request",
+                        json={"to_user": target_user},
+                        headers={"Authorization": f"Bearer {self.app.token}"}
+                    )
+                    if response.status_code == 200:
+                        msg_label.update(f"[green]Request sent to {target_user}![/green]")
+                    else:
+                        msg_label.update(f"[red]Failed to send request[/red]")
+            except Exception as e:
+                msg_label.update(f"[red]Error: {e}[/red]")
+
+class PendingRequestsScreen(Screen):
+    BINDINGS = [
+        ("escape", "app.pop_screen", "Back"),
+        ("r", "refresh_requests", "Refresh")
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Vertical(id="pending-container"):
+            yield Static("Pending Friend Requests", id="title")
+            yield ListView(id="pending-list")
+            yield Static("", id="pending-message")
+        yield Footer()
+
+    async def on_mount(self) -> None:
+        await self.action_refresh_requests()
+
+    async def action_refresh_requests(self) -> None:
+        list_view = self.query_one("#pending-list", ListView)
+        msg_label = self.query_one("#pending-message", Static)
+        list_view.clear()
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "http://localhost:8000/pending-requests",
+                    headers={"Authorization": f"Bearer {self.app.token}"}
+                )
+                if response.status_code == 200:
+                    requests = response.json().get("requests", [])
+                    if not requests:
+                        msg_label.update("No pending requests.")
+                    else:
+                        msg_label.update("Select a user to accept their request.")
+                        for req in requests:
+                            list_view.append(ListItem(Label(f"✅ Accept: {req}"), id=f"req-{req}"))
+                else:
+                    msg_label.update(f"[red]Failed to load requests[/red]")
+        except Exception as e:
+            msg_label.update(f"[red]Error: {e}[/red]")
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.item.id and event.item.id.startswith("req-"):
+            requester = event.item.id.replace("req-", "")
+            msg_label = self.query_one("#pending-message", Static)
+            
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "http://localhost:8000/accept-request",
+                        json={"requester": requester},
+                        headers={"Authorization": f"Bearer {self.app.token}"}
+                    )
+                    if response.status_code == 200:
+                        msg_label.update(f"[green]Accepted request from {requester}![/green]")
+                        await self.action_refresh_requests() # Refresh list
+                    else:
+                        msg_label.update(f"[red]Failed to accept[/red]")
+            except Exception as e:
+                msg_label.update(f"[red]Error: {e}[/red]")
+
+EMOJI_MAP = {
+    ":smile:": "😀", ":laugh:": "😂", ":rofl:": "🤣", ":blush:": "😊",
+    ":cool:": "😎", ":heart_eyes:": "😍", ":kiss:": "😘", ":thinking:": "🤔",
+    ":neutral:": "😐", ":sleeping:": "😴", ":rage:": "😡", ":thumb:": "👍",
+    ":ok:": "👌", ":heart:": "❤️", ":fire:": "🔥", ":rocket:": "🚀",
+    ":tada:": "🎉", ":star:": "⭐", ":100:": "💯"
+}
+
+# ChatScreen has been merged into MainChatScreen
 class FileAttachScreen(Screen):
     """A simple screen to input the path of a file to attach."""
     def compose(self) -> ComposeResult:

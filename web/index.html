@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termi-Chat Web | Ephemeral Messaging</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="theme-default">
+    <div id="app">
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="screen active">
+            <div class="glass-container">
+                <h1 class="glow-text">Termi-Chat</h1>
+                <p class="subtitle">Ephemeral Terminal-Based Messaging</p>
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Username" autocomplete="off">
+                    <div class="password-wrapper">
+                        <input type="password" id="password" placeholder="Password">
+                        <button type="button" id="toggle-password" class="toggle-btn">👁️</button>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button id="login-btn" class="btn-primary">Login</button>
+                    <button id="register-btn" class="btn-secondary">Register</button>
+                </div>
+                <p id="auth-error" class="error-msg"></p>
+            </div>
+        </div>
+
+
+        <!-- Chat Screen -->
+        <div id="chat-screen" class="screen">
+            <div class="chat-container">
+                <aside class="sidebar">
+                    <header class="sidebar-header">
+                        <div class="profile-section">
+                            <img src="robot.png" alt="Profile" class="mini-profile">
+                            <h4 id="user-display-name">Username</h4>
+                        </div>
+                        <div class="notification-bell" id="notif-bell">
+                            🔔
+                            <span id="notif-badge" class="badge" style="display: none;">0</span>
+                        </div>
+                    </header>
+                    <div class="search-box">
+                        <input type="text" id="user-search-input" placeholder="Search users...">
+                        <div id="search-results-sidebar" class="search-results-sidebar"></div>
+                    </div>
+                    <div id="friends-list" class="friends-list">
+                        <!-- Friends will be listed here -->
+                        <p class="empty-list">No friends yet. Search above!</p>
+                    </div>
+                    <div id="pending-section" class="pending-section">
+                        <h5>Pending Requests</h5>
+                        <div id="pending-list" class="pending-list"></div>
+                    </div>
+                </aside>
+
+                <main class="chat-main">
+                    <header class="chat-header">
+                        <div class="chat-info">
+                            <span class="status-indicator"></span>
+                            <h3 id="chat-with-display">Select a friend to chat</h3>
+                        </div>
+                        <div class="chat-actions">
+                            <button id="logout-btn" title="Logout">Logout</button>
+                        </div>
+                    </header>
+                    
+                    <div id="messages-container" class="messages-area">
+                        <div class="chat-placeholder">
+                            <img src="robot.png" alt="Robot" class="placeholder-img">
+                            <p>Pick a friend from the list to start chatting!</p>
+                        </div>
+                    </div>
+
+                    <footer class="chat-footer">
+                        <div class="input-wrapper">
+                            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                            <div class="emoji-container">
+                                <button id="emoji-btn" class="icon-btn" type="button">😊</button>
+                                <div id="emoji-picker" class="emoji-picker" style="display: none;">
+                                    <span>😀</span><span>😂</span><span>❤️</span><span>🔥</span><span>🚀</span><span>👍</span><span>🎉</span><span>✨</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="send-btn" class="btn-primary">Send</button>
+                        <label for="file-upload" class="btn-secondary file-label">
+                            📎
+                            <input type="file" id="file-upload" hidden>
+                        </label>
+                    </footer>
+                </main>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="script.js"></script>
+</body>
+</html>
